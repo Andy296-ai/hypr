@@ -1,0 +1,1177 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hyprland config — Project notes</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f1115;
+        --panel: #171a21;
+        --text: #e7eaf0;
+        --muted: #aab2c5;
+        --border: rgba(255, 255, 255, 0.12);
+        --accent: #c2c1ff;
+        --accent2: #89ecff;
+        --code: #0b0d12;
+        --shadow: rgba(0, 0, 0, 0.35);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: radial-gradient(1200px 900px at 10% 0%, rgba(194, 193, 255, 0.18), transparent 55%),
+          radial-gradient(900px 700px at 100% 20%, rgba(137, 236, 255, 0.12), transparent 55%),
+          var(--bg);
+        color: var(--text);
+        font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Noto Sans",
+          "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      }
+      header {
+        padding: 32px 20px 18px;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(to bottom, rgba(255, 255, 255, 0.04), transparent);
+      }
+      .wrap { max-width: 1000px; margin: 0 auto; }
+      h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: 0.2px; }
+      .sub { margin: 0; color: var(--muted); }
+      main { padding: 22px 20px 48px; }
+      section {
+        margin: 18px 0;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 10px 25px var(--shadow);
+      }
+      h2 { margin: 0 0 10px; font-size: 16px; }
+      h3 { margin: 16px 0 8px; font-size: 14px; color: var(--accent); }
+      a { color: var(--accent2); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      code, pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      }
+      pre {
+        background: var(--code);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 12px;
+        border-radius: 12px;
+        overflow: auto;
+        margin: 10px 0;
+      }
+      code { background: rgba(255, 255, 255, 0.06); padding: 2px 6px; border-radius: 8px; }
+      ul { margin: 8px 0 0; padding-left: 18px; }
+      li { margin: 6px 0; }
+      .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+      @media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(194, 193, 255, 0.12);
+        border: 1px solid rgba(194, 193, 255, 0.22);
+        color: var(--text);
+        font-size: 12px;
+      }
+      .muted { color: var(--muted); }
+      .k { white-space: nowrap; }
+      .hr { height: 1px; background: var(--border); margin: 14px 0; }
+      footer { padding-top: 8px; color: var(--muted); font-size: 12px; }
+      .langbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+      .langbar .label { color: var(--muted); font-size: 12px; }
+      .langbtn {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        padding: 6px 10px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      .langbtn[aria-pressed="true"] {
+        border-color: rgba(194, 193, 255, 0.5);
+        background: rgba(194, 193, 255, 0.14);
+      }
+      .lang { display: none; }
+      .lang.is-active { display: block; }
+      .rtl { direction: rtl; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <h1 id="pageTitle">Hyprland config — Project notes</h1>
+        <p class="sub" id="pageSubtitle">
+          A compact but structure-complete cheat sheet: what gets sourced, key variables, and where keybinds/rules/gestures
+          live.
+        </p>
+        <div class="langbar" role="group" aria-label="Language selector">
+          <span class="label">Language:</span>
+          <button class="langbtn" type="button" data-lang="en" aria-pressed="true">English</button>
+          <button class="langbtn" type="button" data-lang="ru" aria-pressed="false">Русский</button>
+          <button class="langbtn" type="button" data-lang="tj" aria-pressed="false">Тоҷикӣ</button>
+          <button class="langbtn" type="button" data-lang="fa" aria-pressed="false">فارسی</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap">
+        <div class="lang is-active" data-lang="en">
+          <section>
+            <h2>1) Entry point and source order</h2>
+            <p class="muted">
+              The main file is <code>hyprland.conf</code>. It defines paths, pulls in the theme/variables, sources modular
+              configs from <code>hyprland/</code>, and finally applies a user override.
+            </p>
+            <pre><code>$hypr = ~/.config/hypr
+$hl = $hypr/hyprland
+$cConf = ~/.config/caelestia
+
+# Theme/colors:
+exec = cp -L --no-preserve=mode --update=none $hypr/scheme/default.conf $hypr/scheme/current.conf
+source = $hypr/scheme/current.conf
+source = $hypr/variables.conf
+
+# User variables:
+exec = mkdir -p $cConf && touch -a $cConf/hypr-vars.conf
+source = $cConf/hypr-vars.conf
+
+# Modules:
+source = $hl/env.conf
+source = $hl/general.conf
+source = $hl/input.conf
+source = $hl/misc.conf
+source = $hl/animations.conf
+source = $hl/decoration.conf
+source = $hl/group.conf
+source = $hl/execs.conf
+source = $hl/rules.conf
+source = $hl/gestures.conf
+source = $hl/keybinds.conf
+
+# User override:
+exec = mkdir -p $cConf && touch -a $cConf/hypr-user.conf
+source = $cConf/hypr-user.conf
+
+exec-once = /usr/bin/caelestia</code></pre>
+
+            <div class="hr"></div>
+            <p>
+              <span class="pill">Tip</span>
+              <span class="muted">
+                <code>~/.config/caelestia/hypr-user.conf</code> is sourced last — it’s a convenient place for local tweaks
+                without changing this repository.
+              </span>
+            </p>
+          </section>
+
+          <section>
+            <h2>2) Theme and variables</h2>
+            <div class="grid">
+              <div>
+                <h3>scheme/</h3>
+                <ul>
+                  <li><code>scheme/default.conf</code> — base palette.</li>
+                  <li>
+                    <code>scheme/current.conf</code> — the palette actually sourced (recreated by copying from
+                    <code>default.conf</code> on startup).
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3>variables.conf</h3>
+                <ul>
+                  <li>Single place for UX/look variables (gaps/blur/shadow/opacity/borders) and keybind “aliases”.</li>
+                  <li>These variables are then referenced by <code>general.conf</code>, <code>decoration.conf</code>, etc.</li>
+                </ul>
+              </div>
+            </div>
+
+            <h3>Key variables (examples)</h3>
+            <ul>
+              <li><code>$workspaceGaps</code>, <code>$windowGapsIn</code>, <code>$windowGapsOut</code> — gaps.</li>
+              <li>
+                <code>$windowBorderSize</code>, <code>$activeWindowBorderColour</code>, <code>$inactiveWindowBorderColour</code> — borders.
+              </li>
+              <li><code>$blurEnabled</code>, <code>$blurSize</code>, <code>$blurPasses</code> — blur.</li>
+              <li><code>$shadowEnabled</code>, <code>$shadowRange</code>, <code>$shadowRenderPower</code> — shadows.</li>
+              <li><code>$workspaceSwipeFingers</code>, <code>$gestureFingers</code>, <code>$gestureFingersMore</code> — gestures.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>3) Environment (env)</h2>
+            <p class="muted">
+              <code>hyprland/env.conf</code> contains environment variables for apps/toolkits (Qt/Wayland, etc.). Currently:
+            </p>
+            <pre><code>env = QT_QPA_PLATFORM, wayland
+env = QT_WAYLAND_DISABLE_WINDOWDECORATION, 1</code></pre>
+          </section>
+
+          <section>
+            <h2>4) Layout defaults (general + dwindle)</h2>
+            <p class="muted"><code>hyprland/general.conf</code> sets the layout (dwindle), gaps/borders, and split behavior.</p>
+            <ul>
+              <li><b>layout</b>: <code>dwindle</code></li>
+              <li><b>gaps</b>: from <code>variables.conf</code></li>
+              <li><b>dwindle</b>: <code>preserve_split</code>, <code>smart_resizing</code>, etc.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>5) Input and layouts</h2>
+            <p class="muted"><code>hyprland/input.conf</code> configures keyboard/touchpad/cursor and small parameters.</p>
+            <ul>
+              <li><b>kb_layout</b>: <code>us, ru</code></li>
+              <li><b>layout switching</b>: <code>grp:alt_shift_toggle</code> and <code>grp:win_space_toggle</code></li>
+              <li><b>touchpad</b>: natural scroll, disable-while-typing, scroll_factor</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>6) Misc (behavior/background/VRR)</h2>
+            <p class="muted"><code>hyprland/misc.conf</code> groups “misc”: VRR, logo, background, DPMS, focus.</p>
+            <ul>
+              <li><b>VRR</b>: <code>misc.vrr = 1</code></li>
+              <li><b>background</b>: <code>background_color = rgb($surfaceContainer)</code> (from the color scheme)</li>
+              <li><b>focus_on_activate</b>: enabled</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>7) Animations</h2>
+            <p class="muted"><code>hyprland/animations.conf</code> defines bezier curves and animation presets.</p>
+            <ul>
+              <li><b>workspaces</b>: dedicated animation for workspace switching</li>
+              <li><b>specialWorkspace</b>: dedicated animation (slidefadevert)</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>8) Decoration (rounding/blur/shadow)</h2>
+            <p class="muted"><code>hyprland/decoration.conf</code> wires rounding, blur, and shadows via variables.</p>
+            <ul>
+              <li><b>rounding</b>: <code>$windowRounding</code></li>
+              <li><b>blur</b>: controlled by <code>$blurEnabled</code>, <code>$blurSize</code>, <code>$blurPasses</code>, etc.</li>
+              <li><b>shadow</b>: controlled by <code>$shadowEnabled</code>, <code>$shadowRange</code>, <code>$shadowRenderPower</code></li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>9) Window groups</h2>
+            <p class="muted">
+              <code>hyprland/group.conf</code> styles groups and the groupbar. Group navigation is typically defined in
+              keybinds.
+            </p>
+          </section>
+
+          <section>
+            <h2>10) Autostart (execs)</h2>
+            <p class="muted"><code>hyprland/execs.conf</code> starts one-time services/daemons when the session launches.</p>
+            <ul>
+              <li>keyring + polkit agent</li>
+              <li>cliphist (clipboard history)</li>
+              <li>cursor setup (<code>hyprctl setcursor</code> + gsettings)</li>
+              <li>gammastep (night light)</li>
+              <li>caelestia shell / resizer</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>11) Rules</h2>
+            <p class="muted">
+              <code>hyprland/rules.conf</code> is the “policy layer” for windows/layers/workspaces: opacity, float, pin,
+              special workspaces, layerrule.
+            </p>
+            <h3>Windows</h3>
+            <ul>
+              <li><b>opacity</b>: base opacity for non-fullscreen + override</li>
+              <li><b>float</b>: apps/dialogs that are always floating + centered</li>
+              <li><b>picture-in-picture</b>: float + pin + keep_aspect_ratio + initial move</li>
+              <li><b>Steam</b>: separate rules (including <code>immediate on</code> for games)</li>
+            </ul>
+            <h3>Special workspaces</h3>
+            <ul>
+              <li>
+                windows are routed by class/initial_title to <code>special:sysmon</code>, <code>special:music</code>,
+                <code>special:communication</code>, <code>special:todo</code>
+              </li>
+            </ul>
+            <h3>Layer rules</h3>
+            <ul>
+              <li>animations/blur for launcher and shell components</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>12) Gestures</h2>
+            <p class="muted"><code>hyprland/gestures.conf</code> contains workspace swipe parameters and gesture bindings.</p>
+            <h3>Workspace swipe</h3>
+            <pre><code>gesture = $workspaceSwipeFingers, horizontal, workspace</code></pre>
+            <p class="muted">
+              Finger count is defined in <code>variables.conf</code> (e.g. <code>$workspaceSwipeFingers = 3</code>).
+            </p>
+            <h3>Gestures for special workspaces / toggles</h3>
+            <ul>
+              <li>there are <code>up/down</code> gestures to toggle todo/communication/specialws/music via <code>caelestia toggle ...</code></li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>13) Keybinds: workspaces and switching</h2>
+            <p class="muted">
+              <code>hyprland/keybinds.conf</code> is the main keybind list. Some combos are defined as <code>$kb...</code>
+              aliases in <code>variables.conf</code>.
+            </p>
+
+            <h3>Jump to workspace by number</h3>
+            <ul>
+              <li><span class="k"><code>Super + 1..0</code></span> → <code>workspace 1..10</code> (via <code>wsaction.fish</code>)</li>
+              <li><span class="k"><code>Ctrl + Super + 1..0</code></span> → “workspace group” (same script with <code>-g</code>)</li>
+            </ul>
+
+            <h3>Next/previous workspace</h3>
+            <ul>
+              <li><span class="k"><code>Super + mouse wheel</code></span> → <code>workspace -1/+1</code></li>
+              <li><span class="k"><code>Ctrl + Super + ←/→</code></span> → <code>workspace -1/+1</code></li>
+              <li><span class="k"><code>Alt + Super + ←/→</code></span> → jump by 5 (<code>-5/+5</code>)</li>
+              <li>
+                <span class="k"><code>Super + Tab</code></span> / <span class="k"><code>Super + Shift + Tab</code></span> →
+                switch workspace forward/back (replaces PgUp/PgDn)
+              </li>
+            </ul>
+
+            <h3>Special workspace</h3>
+            <ul>
+              <li><span class="k"><code>Super + S</code></span> → toggle special workspace (via <code>caelestia</code>)</li>
+            </ul>
+
+            <div class="hr"></div>
+            <p class="muted">
+              If you need “where is X configured”: most switching lives in <code>hyprland/keybinds.conf</code> (keys) and
+              <code>hyprland/gestures.conf</code> (swipes/gestures).
+            </p>
+          </section>
+
+          <section>
+            <h2>14) User overrides (caelestia)</h2>
+            <ul>
+              <li><code>~/.config/caelestia/hypr-vars.conf</code> — extra/overridden variables.</li>
+              <li><code>~/.config/caelestia/hypr-user.conf</code> — any user config layered over this repo.</li>
+            </ul>
+            <p class="muted">The idea is simple: repo files are the “base”, and these two files are the safe local layer.</p>
+          </section>
+
+          <footer>
+            <div class="hr"></div>
+            <div>
+              This file is a snapshot-style note for the current repo state. If the config structure changes (new
+              <code>source</code>, different binds/gestures), update sections 1, 12, and 13 first.
+            </div>
+          </footer>
+        </div>
+
+        <div class="lang" data-lang="ru">
+          <section>
+            <h2>1) Точка входа и порядок подключения</h2>
+            <p class="muted">
+              Главный файл — <code>hyprland.conf</code>. Он задаёт пути, подтягивает тему/переменные, потом подключает
+              модульные конфиги из <code>hyprland/</code>, и в конце — пользовательский оверрайд.
+            </p>
+            <pre><code>$hypr = ~/.config/hypr
+$hl = $hypr/hyprland
+$cConf = ~/.config/caelestia
+
+# Тема/цвета:
+exec = cp -L --no-preserve=mode --update=none $hypr/scheme/default.conf $hypr/scheme/current.conf
+source = $hypr/scheme/current.conf
+source = $hypr/variables.conf
+
+# Пользовательские переменные:
+exec = mkdir -p $cConf && touch -a $cConf/hypr-vars.conf
+source = $cConf/hypr-vars.conf
+
+# Модули:
+source = $hl/env.conf
+source = $hl/general.conf
+source = $hl/input.conf
+source = $hl/misc.conf
+source = $hl/animations.conf
+source = $hl/decoration.conf
+source = $hl/group.conf
+source = $hl/execs.conf
+source = $hl/rules.conf
+source = $hl/gestures.conf
+source = $hl/keybinds.conf
+
+# Пользовательский оверрайд:
+exec = mkdir -p $cConf && touch -a $cConf/hypr-user.conf
+source = $cConf/hypr-user.conf
+
+exec-once = /usr/bin/caelestia</code></pre>
+
+            <div class="hr"></div>
+            <p>
+              <span class="pill">Важно</span>
+              <span class="muted">
+                последним подключается <code>~/.config/caelestia/hypr-user.conf</code> — это удобное место для локальных
+                правок без изменения репозитория.
+              </span>
+            </p>
+          </section>
+
+          <section>
+            <h2>2) Тема и переменные</h2>
+            <div class="grid">
+              <div>
+                <h3>scheme/</h3>
+                <ul>
+                  <li><code>scheme/default.conf</code> — “исходная” палитра.</li>
+                  <li>
+                    <code>scheme/current.conf</code> — палитра, которая реально подключается (пересоздаётся копированием из
+                    <code>default.conf</code> при старте).
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3>variables.conf</h3>
+                <ul>
+                  <li>Единое место для переменных UX/вида (gaps/blur/shadow/opacity/borders) и “ярлыков” на бинды.</li>
+                  <li>Эти переменные затем используются в <code>general.conf</code>, <code>decoration.conf</code>, и т.д.</li>
+                </ul>
+              </div>
+            </div>
+
+            <h3>Ключевые переменные (примеры)</h3>
+            <ul>
+              <li><code>$workspaceGaps</code>, <code>$windowGapsIn</code>, <code>$windowGapsOut</code> — отступы.</li>
+              <li>
+                <code>$windowBorderSize</code>, <code>$activeWindowBorderColour</code>, <code>$inactiveWindowBorderColour</code> — рамки.
+              </li>
+              <li><code>$blurEnabled</code>, <code>$blurSize</code>, <code>$blurPasses</code> — blur.</li>
+              <li><code>$shadowEnabled</code>, <code>$shadowRange</code>, <code>$shadowRenderPower</code> — тени.</li>
+              <li><code>$workspaceSwipeFingers</code>, <code>$gestureFingers</code>, <code>$gestureFingersMore</code> — жесты.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>3) Окружение (env)</h2>
+            <p class="muted">
+              <code>hyprland/env.conf</code> — переменные окружения для приложений/тулкитов (Qt/Wayland и др.). Сейчас явно
+              выставлено:
+            </p>
+            <pre><code>env = QT_QPA_PLATFORM, wayland
+env = QT_WAYLAND_DISABLE_WINDOWDECORATION, 1</code></pre>
+          </section>
+
+          <section>
+            <h2>4) Общие настройки лейаута (general + dwindle)</h2>
+            <p class="muted"><code>hyprland/general.conf</code> задаёт layout (dwindle), gaps/borders и поведение разбиений.</p>
+            <ul>
+              <li><b>layout</b>: <code>dwindle</code></li>
+              <li><b>gaps</b>: берутся из <code>variables.conf</code></li>
+              <li><b>dwindle</b>: <code>preserve_split</code>, <code>smart_resizing</code> и т.д.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>5) Ввод (input) и раскладки</h2>
+            <p class="muted"><code>hyprland/input.conf</code> — клавиатура/тачпад/курсор и мелкие параметры.</p>
+            <ul>
+              <li><b>kb_layout</b>: <code>us, ru</code></li>
+              <li><b>переключение раскладки</b>: <code>grp:alt_shift_toggle</code> и <code>grp:win_space_toggle</code></li>
+              <li><b>touchpad</b>: natural scroll, disable-while-typing, scroll_factor</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>6) Misc (поведение/фон/VRR)</h2>
+            <p class="muted"><code>hyprland/misc.conf</code> — “разное”: VRR, лого, фон, DPMS, фокус.</p>
+            <ul>
+              <li><b>VRR</b>: <code>misc.vrr = 1</code></li>
+              <li><b>фон</b>: <code>background_color = rgb($surfaceContainer)</code> (цвет из схемы)</li>
+              <li><b>focus_on_activate</b>: включён</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>7) Анимации</h2>
+            <p class="muted"><code>hyprland/animations.conf</code> — кривые (bezier) и наборы анимаций.</p>
+            <ul>
+              <li><b>workspaces</b>: отдельная анимация для переключения рабочих столов</li>
+              <li><b>specialWorkspace</b>: отдельная анимация (slidefadevert)</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>8) Декор (скругления/blur/shadow)</h2>
+            <p class="muted"><code>hyprland/decoration.conf</code> подключает скругления, blur и тени через переменные.</p>
+            <ul>
+              <li><b>rounding</b>: <code>$windowRounding</code></li>
+              <li><b>blur</b>: управляется <code>$blurEnabled</code>, <code>$blurSize</code>, <code>$blurPasses</code> и др.</li>
+              <li><b>shadow</b>: управляется <code>$shadowEnabled</code>, <code>$shadowRange</code>, <code>$shadowRenderPower</code></li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>9) Группы окон (group)</h2>
+            <p class="muted">
+              <code>hyprland/group.conf</code> — оформление групп и groupbar. Переключение активного окна в группе обычно
+              настраивается биндами.
+            </p>
+          </section>
+
+          <section>
+            <h2>10) Авто‑запуск (execs)</h2>
+            <p class="muted"><code>hyprland/execs.conf</code> — сервисы/демоны, которые стартуют один раз при запуске сессии.</p>
+            <ul>
+              <li>keyring + polkit agent</li>
+              <li>cliphist (история буфера обмена)</li>
+              <li>курсоры (через <code>hyprctl setcursor</code> и gsettings)</li>
+              <li>gammastep (ночной свет)</li>
+              <li>caelestia shell / resizer</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>11) Правила (rules)</h2>
+            <p class="muted">
+              <code>hyprland/rules.conf</code> — “политика” для окон/слоёв/воркспейсов: прозрачность, float, pin, special
+              workspace, layerrule.
+            </p>
+            <h3>Окна</h3>
+            <ul>
+              <li><b>прозрачность</b>: базовая opacity для не‑fullscreen + override</li>
+              <li><b>float</b>: набор приложений/диалогов, которые всегда плавающие + центрирование</li>
+              <li><b>picture‑in‑picture</b>: float + pin + keep_aspect_ratio + стартовый move</li>
+              <li><b>Steam</b>: отдельные правила (в т.ч. <code>immediate on</code> для игр)</li>
+            </ul>
+            <h3>Special workspaces</h3>
+            <ul>
+              <li>
+                окна по class/initial_title автоматически улетают в <code>special:sysmon</code>, <code>special:music</code>,
+                <code>special:communication</code>, <code>special:todo</code>
+              </li>
+            </ul>
+            <h3>Layer rules</h3>
+            <ul>
+              <li>анимации/blur для launcher и компонентов shell</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>12) Жесты (gestures)</h2>
+            <p class="muted"><code>hyprland/gestures.conf</code> — параметры свайпа рабочих столов и сами жесты.</p>
+            <h3>Свайп рабочих столов</h3>
+            <pre><code>gesture = $workspaceSwipeFingers, horizontal, workspace</code></pre>
+            <p class="muted">
+              Количество пальцев берётся из <code>variables.conf</code> (например <code>$workspaceSwipeFingers = 3</code>).
+            </p>
+            <h3>Жесты для special workspaces / toggles</h3>
+            <ul>
+              <li>есть жесты <code>up/down</code> для переключения todo/communication/specialws/music через <code>caelestia toggle ...</code></li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>13) Клавиши (keybinds): рабочие столы и переключение</h2>
+            <p class="muted">
+              <code>hyprland/keybinds.conf</code> — главный набор биндoв. Часть модификаторов/комбо вынесена в
+              <code>variables.conf</code> как <code>$kb...</code>.
+            </p>
+
+            <h3>Переход на workspace по номеру</h3>
+            <ul>
+              <li><span class="k"><code>Super + 1..0</code></span> → <code>workspace 1..10</code> (через <code>wsaction.fish</code>)</li>
+              <li><span class="k"><code>Ctrl + Super + 1..0</code></span> → “workspace group” (тот же скрипт с флагом <code>-g</code>)</li>
+            </ul>
+
+            <h3>Следующий/предыдущий workspace</h3>
+            <ul>
+              <li><span class="k"><code>Super + колесо мыши</code></span> → <code>workspace -1/+1</code></li>
+              <li><span class="k"><code>Ctrl + Super + ←/→</code></span> → <code>workspace -1/+1</code></li>
+              <li><span class="k"><code>Alt + Super + ←/→</code></span> → прыжок на 5 воркспейсов (<code>-5/+5</code>)</li>
+              <li>
+                <span class="k"><code>Super + Tab</code></span> / <span class="k"><code>Super + Shift + Tab</code></span> →
+                переключение workspace вперёд/назад (замена PgUp/PgDn)
+              </li>
+            </ul>
+
+            <h3>Special workspace</h3>
+            <ul>
+              <li><span class="k"><code>Super + S</code></span> → toggle special workspace (через <code>caelestia</code>)</li>
+            </ul>
+
+            <div class="hr"></div>
+            <p class="muted">
+              Если нужно быстро найти “что отвечает за X”: почти всё, что связано с переключениями, находится в
+              <code>hyprland/keybinds.conf</code> (клавиши) и <code>hyprland/gestures.conf</code> (свайпы/жесты).
+            </p>
+          </section>
+
+          <section>
+            <h2>14) Пользовательские оверрайды (caelestia)</h2>
+            <ul>
+              <li><code>~/.config/caelestia/hypr-vars.conf</code> — дополнительные/перезаписанные переменные.</li>
+              <li><code>~/.config/caelestia/hypr-user.conf</code> — любые пользовательские настройки поверх репозитория.</li>
+            </ul>
+            <p class="muted">
+              Логика простая: всё из репозитория — “база”, а эти два файла — безопасное место для локальных правок.
+            </p>
+          </section>
+
+          <footer>
+            <div class="hr"></div>
+            <div>
+              Этот файл — конспект текущего состояния репозитория. Если структура конфигов меняется (новые <code>source</code>,
+              другие бинды/жесты), обнови разделы 1, 12 и 13 в первую очередь.
+            </div>
+          </footer>
+        </div>
+
+        <div class="lang" data-lang="tj">
+          <section>
+            <h2>1) Нуқтаи оғоз ва тартиби пайвасткунӣ</h2>
+            <p class="muted">
+              Файли асосӣ — <code>hyprland.conf</code>. Он роҳҳоро муайян мекунад, мавзӯъ/тағйирёбандаҳоро бор мекунад,
+              баъд конфигҳои модулӣ аз <code>hyprland/</code>-ро <span class="k">source</span> мекунад ва дар охир — override-и корбарро.
+            </p>
+            <pre><code>$hypr = ~/.config/hypr
+$hl = $hypr/hyprland
+$cConf = ~/.config/caelestia
+
+# Theme/colors:
+exec = cp -L --no-preserve=mode --update=none $hypr/scheme/default.conf $hypr/scheme/current.conf
+source = $hypr/scheme/current.conf
+source = $hypr/variables.conf
+
+# User variables:
+exec = mkdir -p $cConf && touch -a $cConf/hypr-vars.conf
+source = $cConf/hypr-vars.conf
+
+# Modules:
+source = $hl/env.conf
+source = $hl/general.conf
+source = $hl/input.conf
+source = $hl/misc.conf
+source = $hl/animations.conf
+source = $hl/decoration.conf
+source = $hl/group.conf
+source = $hl/execs.conf
+source = $hl/rules.conf
+source = $hl/gestures.conf
+source = $hl/keybinds.conf
+
+# User override:
+exec = mkdir -p $cConf && touch -a $cConf/hypr-user.conf
+source = $cConf/hypr-user.conf
+
+exec-once = /usr/bin/caelestia</code></pre>
+
+            <div class="hr"></div>
+            <p>
+              <span class="pill">Муҳим</span>
+              <span class="muted">
+                <code>~/.config/caelestia/hypr-user.conf</code> охирин бор source мешавад — ҷои қулай барои тағйироти маҳаллӣ
+                бе иваз кардани ин репозиторӣ.
+              </span>
+            </p>
+          </section>
+
+          <section>
+            <h2>2) Мавзӯъ ва тағйирёбандаҳо</h2>
+            <div class="grid">
+              <div>
+                <h3>scheme/</h3>
+                <ul>
+                  <li><code>scheme/default.conf</code> — палитраи асосӣ.</li>
+                  <li>
+                    <code>scheme/current.conf</code> — палитрае, ки воқеан source мешавад (ҳангоми оғоз аз
+                    <code>default.conf</code> нусха мегирад).
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3>variables.conf</h3>
+                <ul>
+                  <li>Ҷои ягона барои тағйирёбандаҳои намоиш/UX (gaps/blur/shadow/opacity/borders) ва “alias”-ҳои keybind.</li>
+                  <li>Ин тағйирёбандаҳо дар <code>general.conf</code>, <code>decoration.conf</code> ва ғайра истифода мешаванд.</li>
+                </ul>
+              </div>
+            </div>
+
+            <h3>Тағйирёбандаҳои калидӣ (мисолҳо)</h3>
+            <ul>
+              <li><code>$workspaceGaps</code>, <code>$windowGapsIn</code>, <code>$windowGapsOut</code> — фосилаҳо.</li>
+              <li>
+                <code>$windowBorderSize</code>, <code>$activeWindowBorderColour</code>, <code>$inactiveWindowBorderColour</code> — чорчӯбаҳо.
+              </li>
+              <li><code>$blurEnabled</code>, <code>$blurSize</code>, <code>$blurPasses</code> — blur.</li>
+              <li><code>$shadowEnabled</code>, <code>$shadowRange</code>, <code>$shadowRenderPower</code> — сояҳо.</li>
+              <li><code>$workspaceSwipeFingers</code>, <code>$gestureFingers</code>, <code>$gestureFingersMore</code> — gesture-ҳо.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>3) Муҳит (env)</h2>
+            <p class="muted">
+              <code>hyprland/env.conf</code> тағйирёбандаҳои муҳитиро барои барномаҳо/тулкитҳо нигоҳ медорад (Qt/Wayland ва ғ.). Ҳоло:
+            </p>
+            <pre><code>env = QT_QPA_PLATFORM, wayland
+env = QT_WAYLAND_DISABLE_WINDOWDECORATION, 1</code></pre>
+          </section>
+
+          <section>
+            <h2>4) Танзимоти умумии layout (general + dwindle)</h2>
+            <p class="muted"><code>hyprland/general.conf</code> layout (dwindle), gaps/borders ва рафтори split-ро танзим мекунад.</p>
+            <ul>
+              <li><b>layout</b>: <code>dwindle</code></li>
+              <li><b>gaps</b>: аз <code>variables.conf</code></li>
+              <li><b>dwindle</b>: <code>preserve_split</code>, <code>smart_resizing</code> ва ғ.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>5) Вуруд (input) ва раскладкаҳо</h2>
+            <p class="muted"><code>hyprland/input.conf</code> клавиатура/тачпад/курсор ва параметрҳои хурдро танзим мекунад.</p>
+            <ul>
+              <li><b>kb_layout</b>: <code>us, ru</code></li>
+              <li><b>ивазкунии забон</b>: <code>grp:alt_shift_toggle</code> ва <code>grp:win_space_toggle</code></li>
+              <li><b>touchpad</b>: natural scroll, disable-while-typing, scroll_factor</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>6) Misc (рафтор/пасзамина/VRR)</h2>
+            <p class="muted"><code>hyprland/misc.conf</code> танзимоти “дигар”-ро ҷамъ мекунад: VRR, пасзамина, DPMS, focus.</p>
+            <ul>
+              <li><b>VRR</b>: <code>misc.vrr = 1</code></li>
+              <li><b>пасзамина</b>: <code>background_color = rgb($surfaceContainer)</code> (аз схема)</li>
+              <li><b>focus_on_activate</b>: фаъол</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>7) Аниматсияҳо</h2>
+            <p class="muted"><code>hyprland/animations.conf</code> bezier-ҳо ва пресетҳои аниматсияро муайян мекунад.</p>
+            <ul>
+              <li><b>workspaces</b>: аниматсияи ҷудогона барои гузариш байни workspace-ҳо</li>
+              <li><b>specialWorkspace</b>: аниматсияи ҷудогона (slidefadevert)</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>8) Ороиш (rounding/blur/shadow)</h2>
+            <p class="muted"><code>hyprland/decoration.conf</code> rounding, blur ва сояҳоро тавассути тағйирёбандаҳо идора мекунад.</p>
+            <ul>
+              <li><b>rounding</b>: <code>$windowRounding</code></li>
+              <li><b>blur</b>: бо <code>$blurEnabled</code>, <code>$blurSize</code>, <code>$blurPasses</code> ва ғ.</li>
+              <li><b>shadow</b>: бо <code>$shadowEnabled</code>, <code>$shadowRange</code>, <code>$shadowRenderPower</code></li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>9) Гурӯҳҳои тиреза (group)</h2>
+            <p class="muted">
+              <code>hyprland/group.conf</code> намуди гурӯҳҳо ва groupbar-ро танзим мекунад; гузариш одатан дар keybind-ҳо аст.
+            </p>
+          </section>
+
+          <section>
+            <h2>10) Autostart (execs)</h2>
+            <p class="muted"><code>hyprland/execs.conf</code> сервис/демонҳоеро, ки як бор ҳангоми оғоз шудани сессия старт мешаванд, иҷро мекунад.</p>
+            <ul>
+              <li>keyring + polkit agent</li>
+              <li>cliphist (таърихи клипборд)</li>
+              <li>курсор (<code>hyprctl setcursor</code> + gsettings)</li>
+              <li>gammastep (нури шаб)</li>
+              <li>caelestia shell / resizer</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>11) Қоидаҳо (rules)</h2>
+            <p class="muted">
+              <code>hyprland/rules.conf</code> “сиёсат”-и тирезаҳо/қабатҳо/workspace-ҳо: opacity, float, pin, special workspace, layerrule.
+            </p>
+            <h3>Тирезаҳо</h3>
+            <ul>
+              <li><b>opacity</b>: шаффофияти асосӣ барои non-fullscreen + override</li>
+              <li><b>float</b>: барномаҳо/диалогҳои ҳамеша шинокун + center</li>
+              <li><b>picture-in-picture</b>: float + pin + keep_aspect_ratio + move-и аввал</li>
+              <li><b>Steam</b>: қоидаҳои ҷудогона (аз ҷумла <code>immediate on</code> барои бозиҳо)</li>
+            </ul>
+            <h3>Special workspaces</h3>
+            <ul>
+              <li>
+                равонакунии тирезаҳо ба <code>special:sysmon</code>, <code>special:music</code>, <code>special:communication</code>, <code>special:todo</code>
+              </li>
+            </ul>
+            <h3>Layer rules</h3>
+            <ul>
+              <li>аниматсия/blur барои launcher ва ҷузъҳои shell</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>12) Gesture-ҳо</h2>
+            <p class="muted"><code>hyprland/gestures.conf</code> параметрҳои swipe-и workspace ва биндинги gesture-ҳоро нигоҳ медорад.</p>
+            <h3>Swipe байни workspace-ҳо</h3>
+            <pre><code>gesture = $workspaceSwipeFingers, horizontal, workspace</code></pre>
+            <p class="muted">
+              Теъдоди ангуштҳо аз <code>variables.conf</code> меояд (масалан <code>$workspaceSwipeFingers = 3</code>).
+            </p>
+            <h3>Gesture барои toggle-и special workspace-ҳо</h3>
+            <ul>
+              <li>gesture-ҳои <code>up/down</code> барои todo/communication/specialws/music тавассути <code>caelestia toggle ...</code></li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>13) Keybind-ҳо: workspace ва гузариш</h2>
+            <p class="muted">
+              <code>hyprland/keybinds.conf</code> рӯйхати асосии keybind-ҳост. Қисме аз комбоҳо дар <code>variables.conf</code> ҳамчун <code>$kb...</code> таъриф шудаанд.
+            </p>
+            <h3>Гузаштан ба workspace бо рақам</h3>
+            <ul>
+              <li><span class="k"><code>Super + 1..0</code></span> → <code>workspace 1..10</code> (бо <code>wsaction.fish</code>)</li>
+              <li><span class="k"><code>Ctrl + Super + 1..0</code></span> → “workspace group” (ҳамон скрипт бо <code>-g</code>)</li>
+            </ul>
+            <h3>Workspace-и навбатӣ/қаблӣ</h3>
+            <ul>
+              <li><span class="k"><code>Super + чархи муш</code></span> → <code>workspace -1/+1</code></li>
+              <li><span class="k"><code>Ctrl + Super + ←/→</code></span> → <code>workspace -1/+1</code></li>
+              <li><span class="k"><code>Alt + Super + ←/→</code></span> → ҷаҳиш ба 5 (<code>-5/+5</code>)</li>
+              <li><span class="k"><code>Super + Tab</code></span> / <span class="k"><code>Super + Shift + Tab</code></span> → пеш/ақиб (ҷойгузини PgUp/PgDn)</li>
+            </ul>
+            <h3>Special workspace</h3>
+            <ul>
+              <li><span class="k"><code>Super + S</code></span> → toggle special workspace (бо <code>caelestia</code>)</li>
+            </ul>
+            <div class="hr"></div>
+            <p class="muted">
+              Барои ёфтани “X куҷост”: бештар гузаришҳо дар <code>hyprland/keybinds.conf</code> (калидҳо) ва <code>hyprland/gestures.conf</code> (gesture/swipe) ҳастанд.
+            </p>
+          </section>
+
+          <section>
+            <h2>14) Override-ҳои корбар (caelestia)</h2>
+            <ul>
+              <li><code>~/.config/caelestia/hypr-vars.conf</code> — тағйирёбандаҳои иловагӣ/override.</li>
+              <li><code>~/.config/caelestia/hypr-user.conf</code> — конфиги корбар болои репо.</li>
+            </ul>
+            <p class="muted">Ғоя оддӣ: файлҳои репо “база” ҳастанд, ин ду файл — қабати маҳаллӣ ва бехатар.</p>
+          </section>
+
+          <footer>
+            <div class="hr"></div>
+            <div>
+              Ин файл конспекти ҳолати ҷории репозиторӣ аст. Агар сохтори конфигҳо тағйир ёбад (source-и нав, bind/gesture-и дигар),
+              аввал қисмҳои 1, 12 ва 13-ро навсозӣ кун.
+            </div>
+          </footer>
+        </div>
+
+        <div class="lang rtl" data-lang="fa">
+          <section>
+            <h2>۱) نقطهٔ ورود و ترتیب بارگذاری</h2>
+            <p class="muted">
+              فایل اصلی <code>hyprland.conf</code> است: مسیرها را تعریف می‌کند، تم/متغیرها را می‌کشد، سپس فایل‌های ماژولار
+              را از <code>hyprland/</code> <span class="k">source</span> می‌کند و در آخر override کاربر را اعمال می‌کند.
+            </p>
+            <pre><code>$hypr = ~/.config/hypr
+$hl = $hypr/hyprland
+$cConf = ~/.config/caelestia
+
+# Theme/colors:
+exec = cp -L --no-preserve=mode --update=none $hypr/scheme/default.conf $hypr/scheme/current.conf
+source = $hypr/scheme/current.conf
+source = $hypr/variables.conf
+
+# User variables:
+exec = mkdir -p $cConf && touch -a $cConf/hypr-vars.conf
+source = $cConf/hypr-vars.conf
+
+# Modules:
+source = $hl/env.conf
+source = $hl/general.conf
+source = $hl/input.conf
+source = $hl/misc.conf
+source = $hl/animations.conf
+source = $hl/decoration.conf
+source = $hl/group.conf
+source = $hl/execs.conf
+source = $hl/rules.conf
+source = $hl/gestures.conf
+source = $hl/keybinds.conf
+
+# User override:
+exec = mkdir -p $cConf && touch -a $cConf/hypr-user.conf
+source = $cConf/hypr-user.conf
+
+exec-once = /usr/bin/caelestia</code></pre>
+
+            <div class="hr"></div>
+            <p>
+              <span class="pill">نکته</span>
+              <span class="muted">
+                <code>~/.config/caelestia/hypr-user.conf</code> آخر از همه source می‌شود؛ جای مناسبی برای تغییرات محلی بدون
+                دست‌زدن به این ریپو است.
+              </span>
+            </p>
+          </section>
+
+          <section>
+            <h2>۲) تم و متغیرها</h2>
+            <div class="grid">
+              <div>
+                <h3>scheme/</h3>
+                <ul>
+                  <li><code>scheme/default.conf</code> — پالت پایه.</li>
+                  <li>
+                    <code>scheme/current.conf</code> — پالتی که واقعاً source می‌شود (در شروع با کپی از
+                    <code>default.conf</code> بازتولید می‌شود).
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3>variables.conf</h3>
+                <ul>
+                  <li>محل واحد برای متغیرهای ظاهر/UX (gaps/blur/shadow/opacity/borders) و aliasهای keybind.</li>
+                  <li>این متغیرها در <code>general.conf</code>، <code>decoration.conf</code> و… استفاده می‌شوند.</li>
+                </ul>
+              </div>
+            </div>
+
+            <h3>نمونه متغیرهای مهم</h3>
+            <ul>
+              <li><code>$workspaceGaps</code>, <code>$windowGapsIn</code>, <code>$windowGapsOut</code> — فاصله‌ها.</li>
+              <li>
+                <code>$windowBorderSize</code>, <code>$activeWindowBorderColour</code>, <code>$inactiveWindowBorderColour</code> — مرز پنجره.
+              </li>
+              <li><code>$blurEnabled</code>, <code>$blurSize</code>, <code>$blurPasses</code> — محوشدگی.</li>
+              <li><code>$shadowEnabled</code>, <code>$shadowRange</code>, <code>$shadowRenderPower</code> — سایه.</li>
+              <li><code>$workspaceSwipeFingers</code>, <code>$gestureFingers</code>, <code>$gestureFingersMore</code> — ژست‌ها.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>۳) محیط (env)</h2>
+            <p class="muted">
+              <code>hyprland/env.conf</code> شامل متغیرهای محیطی برای اپ‌ها/Toolkitهاست (Qt/Wayland و…).
+            </p>
+            <pre><code>env = QT_QPA_PLATFORM, wayland
+env = QT_WAYLAND_DISABLE_WINDOWDECORATION, 1</code></pre>
+          </section>
+
+          <section>
+            <h2>۴) پیش‌فرض‌های چیدمان (general + dwindle)</h2>
+            <p class="muted"><code>hyprland/general.conf</code> layout (dwindle)، gaps/borders و رفتار split را تنظیم می‌کند.</p>
+            <ul>
+              <li><b>layout</b>: <code>dwindle</code></li>
+              <li><b>gaps</b>: از <code>variables.conf</code></li>
+              <li><b>dwindle</b>: <code>preserve_split</code>, <code>smart_resizing</code> و…</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>۵) ورودی (input) و Layoutها</h2>
+            <p class="muted"><code>hyprland/input.conf</code> کیبورد/تاچ‌پد/کرسر و پارامترهای ریز را تنظیم می‌کند.</p>
+            <ul>
+              <li><b>kb_layout</b>: <code>us, ru</code></li>
+              <li><b>تعویض زبان</b>: <code>grp:alt_shift_toggle</code> و <code>grp:win_space_toggle</code></li>
+              <li><b>touchpad</b>: natural scroll, disable-while-typing, scroll_factor</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>۶) Misc (رفتار/پس‌زمینه/VRR)</h2>
+            <p class="muted"><code>hyprland/misc.conf</code> تنظیمات متفرقه مثل VRR، پس‌زمینه و focus را نگه می‌دارد.</p>
+            <ul>
+              <li><b>VRR</b>: <code>misc.vrr = 1</code></li>
+              <li><b>پس‌زمینه</b>: <code>background_color = rgb($surfaceContainer)</code></li>
+              <li><b>focus_on_activate</b>: روشن</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>۷) انیمیشن‌ها</h2>
+            <p class="muted"><code>hyprland/animations.conf</code> منحنی‌ها و presetهای انیمیشن را تعریف می‌کند.</p>
+            <ul>
+              <li><b>workspaces</b>: انیمیشن مخصوص جابه‌جایی workspace</li>
+              <li><b>specialWorkspace</b>: انیمیشن مخصوص (slidefadevert)</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>۸) دکور (گوشه‌گرد/blur/shadow)</h2>
+            <p class="muted"><code>hyprland/decoration.conf</code> گوشه‌گردی، blur و سایه را با متغیرها کنترل می‌کند.</p>
+            <ul>
+              <li><b>rounding</b>: <code>$windowRounding</code></li>
+              <li><b>blur</b>: با <code>$blurEnabled</code>، <code>$blurSize</code>، <code>$blurPasses</code> و…</li>
+              <li><b>shadow</b>: با <code>$shadowEnabled</code>، <code>$shadowRange</code>، <code>$shadowRenderPower</code></li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>۹) گروه پنجره‌ها</h2>
+            <p class="muted"><code>hyprland/group.conf</code> ظاهر group و groupbar را تنظیم می‌کند؛ جابه‌جایی معمولاً در keybinds است.</p>
+          </section>
+
+          <section>
+            <h2>۱۰) اجرای خودکار (execs)</h2>
+            <p class="muted"><code>hyprland/execs.conf</code> سرویس‌هایی که یک‌بار هنگام شروع سشن اجرا می‌شوند را راه‌اندازی می‌کند.</p>
+            <ul>
+              <li>keyring + polkit agent</li>
+              <li>cliphist (تاریخچه کلیپ‌بورد)</li>
+              <li>تنظیم کرسر (<code>hyprctl setcursor</code> + gsettings)</li>
+              <li>gammastep (نور شب)</li>
+              <li>caelestia shell / resizer</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>۱۱) قوانین (rules)</h2>
+            <p class="muted"><code>hyprland/rules.conf</code> “policy” برای پنجره/لایه/workspace است: opacity, float, pin, special workspace, layerrule.</p>
+            <h3>پنجره‌ها</h3>
+            <ul>
+              <li><b>opacity</b>: شفافیت پایه برای غیر تمام‌صفحه + override</li>
+              <li><b>float</b>: اپ‌ها/دیالوگ‌های شناور + center</li>
+              <li><b>PiP</b>: float + pin + keep_aspect_ratio + move اولیه</li>
+              <li><b>Steam</b>: قوانین جدا (از جمله <code>immediate on</code> برای بازی‌ها)</li>
+            </ul>
+            <h3>Special workspaces</h3>
+            <ul>
+              <li>مسیر‌دهی پنجره‌ها به <code>special:sysmon</code>, <code>special:music</code>, <code>special:communication</code>, <code>special:todo</code></li>
+            </ul>
+            <h3>Layer rules</h3>
+            <ul>
+              <li>انیمیشن/blur برای launcher و اجزای shell</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>۱۲) ژست‌ها (gestures)</h2>
+            <p class="muted"><code>hyprland/gestures.conf</code> پارامترهای swipe workspace و binding ژست‌ها را نگه می‌دارد.</p>
+            <h3>Swipe بین workspaceها</h3>
+            <pre><code>gesture = $workspaceSwipeFingers, horizontal, workspace</code></pre>
+            <p class="muted">تعداد انگشت از <code>variables.conf</code> می‌آید (مثلاً <code>$workspaceSwipeFingers = 3</code>).</p>
+            <h3>ژست‌های toggle برای special workspaceها</h3>
+            <ul>
+              <li>ژست‌های <code>up/down</code> برای todo/communication/specialws/music از طریق <code>caelestia toggle ...</code></li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>۱۳) کلیدها: workspace و جابه‌جایی</h2>
+            <p class="muted"><code>hyprland/keybinds.conf</code> لیست اصلی keybindهاست؛ بعضی ترکیب‌ها در <code>variables.conf</code> با <code>$kb...</code> نام‌گذاری شده‌اند.</p>
+            <h3>رفتن به workspace با شماره</h3>
+            <ul>
+              <li><span class="k"><code>Super + 1..0</code></span> → <code>workspace 1..10</code> (با <code>wsaction.fish</code>)</li>
+              <li><span class="k"><code>Ctrl + Super + 1..0</code></span> → workspace group (همان اسکریپت با <code>-g</code>)</li>
+            </ul>
+            <h3>workspace بعدی/قبلی</h3>
+            <ul>
+              <li><span class="k"><code>Super + wheel</code></span> → <code>workspace -1/+1</code></li>
+              <li><span class="k"><code>Ctrl + Super + ←/→</code></span> → <code>workspace -1/+1</code></li>
+              <li><span class="k"><code>Alt + Super + ←/→</code></span> → پرش ۵تایی (<code>-5/+5</code>)</li>
+              <li><span class="k"><code>Super + Tab</code></span> / <span class="k"><code>Super + Shift + Tab</code></span> → جلو/عقب (جایگزین PgUp/PgDn)</li>
+            </ul>
+            <h3>Special workspace</h3>
+            <ul>
+              <li><span class="k"><code>Super + S</code></span> → toggle special workspace (با <code>caelestia</code>)</li>
+            </ul>
+            <div class="hr"></div>
+            <p class="muted">
+              برای پیدا کردن “X کجاست”: بیشتر سوییچ‌ها در <code>hyprland/keybinds.conf</code> و <code>hyprland/gestures.conf</code> هستند.
+            </p>
+          </section>
+
+          <section>
+            <h2>۱۴) Overrideهای کاربر (caelestia)</h2>
+            <ul>
+              <li><code>~/.config/caelestia/hypr-vars.conf</code> — متغیرهای اضافه/override.</li>
+              <li><code>~/.config/caelestia/hypr-user.conf</code> — تنظیمات کاربر روی این ریپو.</li>
+            </ul>
+            <p class="muted">ایده ساده است: فایل‌های ریپو پایه‌اند و این دو فایل لایهٔ محلی امن هستند.</p>
+          </section>
+
+          <footer>
+            <div class="hr"></div>
+            <div>
+              این فایل یک “یادداشت از وضعیت فعلی ریپو” است. اگر ساختار کانفیگ عوض شد (sourceهای جدید یا bind/gestureهای
+              متفاوت)، اول بخش‌های ۱، ۱۲ و ۱۳ را به‌روزرسانی کن.
+            </div>
+          </footer>
+        </div>
+      </div>
+    </main>
+    <script>
+      (function () {
+        const STORAGE_KEY = "config-notes.lang";
+        const langs = ["en", "ru", "tj", "fa"];
+        const langButtons = Array.from(document.querySelectorAll("[data-lang].langbtn"));
+        const langBlocks = Array.from(document.querySelectorAll(".lang[data-lang]"));
+        const pageTitle = document.getElementById("pageTitle");
+        const pageSubtitle = document.getElementById("pageSubtitle");
+
+        const titles = {
+          en: {
+            title: "Hyprland config — Project notes",
+            subtitle:
+              "A compact but structure-complete cheat sheet: what gets sourced, key variables, and where keybinds/rules/gestures live.",
+            htmlLang: "en",
+          },
+          ru: {
+            title: "Hyprland config — конспект проекта",
+            subtitle:
+              "Краткая, но “полная по структуре” шпаргалка: какие файлы подключаются, какие переменные важны, где лежат бинды, правила и жесты.",
+            htmlLang: "ru",
+          },
+          tj: {
+            title: "Hyprland config — конспекти лоиҳа",
+            subtitle:
+              "Шпаргалкаи кӯтоҳ, вале аз рӯи сохтор пурра: кадом файлҳо source мешаванд, тағйирёбандаҳои муҳим, ва bind/rule/gesture дар куҷост.",
+            htmlLang: "tg",
+          },
+          fa: {
+            title: "پیکربندی Hyprland — یادداشت‌های پروژه",
+            subtitle:
+              "یک خلاصهٔ ساختار-کامل: چه چیزهایی source می‌شوند، متغیرهای کلیدی، و این‌که keybind/rule/gesture کجا تعریف شده‌اند.",
+            htmlLang: "fa",
+          },
+        };
+
+        function setLang(lang) {
+          if (!langs.includes(lang)) lang = "en";
+
+          const meta = titles[lang];
+          document.documentElement.lang = meta.htmlLang;
+          document.title = meta.title;
+          pageTitle.textContent = meta.title;
+          pageSubtitle.textContent = meta.subtitle;
+
+          for (const b of langButtons) b.setAttribute("aria-pressed", b.dataset.lang === lang ? "true" : "false");
+          for (const el of langBlocks) el.classList.toggle("is-active", el.dataset.lang === lang);
+          try { localStorage.setItem(STORAGE_KEY, lang); } catch (_) {}
+        }
+
+        for (const b of langButtons) b.addEventListener("click", () => setLang(b.dataset.lang));
+
+        let initial = "en";
+        try { initial = localStorage.getItem(STORAGE_KEY) || initial; } catch (_) {}
+        setLang(initial);
+      })();
+    </script>
+  </body>
+</html>
